@@ -501,13 +501,14 @@ export default function PainelLiderancas() {
 
 
 
-  async function geocodificarEndereco(textoDigitado) {
+  async function geocodificarEndereco(textoDigitado, mapaOverride) {
     const texto = String(textoDigitado || '').trim();
     if (!texto) return;
+    const mapaAlvo = mapaOverride || formMapa;
     setGeocodando(true);
     setGeocodeMsg('');
     try {
-      const query = formMapa === 'parana' ? `${texto}, Paraná, Brasil` : `${texto}, Curitiba, Paraná, Brasil`;
+      const query = mapaAlvo === 'parana' ? `${texto}, Paraná, Brasil` : `${texto}, Curitiba, Paraná, Brasil`;
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&viewbox=-54.62,-22.29,-48.02,-26.72&bounded=0&q=${encodeURIComponent(query)}`;
       const resp = await fetch(url, { headers: { Accept: 'application/json' } });
       const dados = await resp.json();
@@ -877,6 +878,12 @@ export default function PainelLiderancas() {
             <h2>{editando ? 'Editar liderança' : 'Nova liderança'}</h2>
             <input type="hidden" name="id" defaultValue={dadosFormulario.id || ''} />
             <Field label="Nome"><input name="nome" defaultValue={dadosFormulario.nome} required /></Field>
+            <div className="grid-2"><Field label="Mapa"><select name="mapa" value={formMapa} onChange={(e) => {
+              const novoMapa = e.target.value;
+              setFormMapa(novoMapa);
+              const valorAtual = localInputRef.current?.value?.trim();
+              if (valorAtual) geocodificarEndereco(valorAtual, novoMapa);
+            }}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field><Field label="Regional"><select name="regional" key={formMapa} defaultValue={formMapa === dadosFormulario.mapa ? dadosFormulario.regional : ''}>{listaRegionais(formMapa).map((r) => <option key={r.id} value={r.codigo}>{r.nome}</option>)}</select></Field></div>
             <Field label="Bairro / cidade">
               <input
                 name="local"
@@ -897,7 +904,6 @@ export default function PainelLiderancas() {
               {geocodeMsg && <small className="geocode-msg">{geocodeMsg}</small>}
             </div>
             <Field label="Categoria / cor do pin"><select name="categoria" defaultValue={dadosFormulario.categoria || 'vermelho-politicos'}>{CATEGORIAS_PIN.map((c) => <option key={c.codigo} value={c.codigo}>{c.corNome} — {c.nome}</option>)}</select></Field>
-            <div className="grid-2"><Field label="Mapa"><select name="mapa" value={formMapa} onChange={(e) => setFormMapa(e.target.value)}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field><Field label="Regional"><select name="regional" key={formMapa} defaultValue={formMapa === dadosFormulario.mapa ? dadosFormulario.regional : ''}>{listaRegionais(formMapa).map((r) => <option key={r.id} value={r.codigo}>{r.nome}</option>)}</select></Field></div>
             <div className="grid-2"><Field label="Latitude"><input name="lat" ref={latInputRef} defaultValue={dadosFormulario.lat} /></Field><Field label="Longitude"><input name="lng" ref={lngInputRef} defaultValue={dadosFormulario.lng} /></Field></div>
             <input type="hidden" name="fel" value={dadosFormulario.fel || 1} />
             <div className="grid-2"><Field label="Meta manual de votos previstos"><input name="meta_votos" type="number" min="0" defaultValue={dadosFormulario.meta_votos || metaLideranca(dadosFormulario)} required /></Field><Field label="Votos alcançados"><input name="atuais" type="number" min="0" defaultValue={dadosFormulario.atuais} /></Field></div>
