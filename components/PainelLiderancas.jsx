@@ -40,7 +40,7 @@ const defaultParams = {
   partido: 'Republicanos',
   vvt: 6300000,
   nv: 30,
-  vac: 80000,
+  vac: 100000,
   nlbModo: 'auto',
   nlbManual: 5
 };
