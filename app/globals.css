@@ -77,6 +77,10 @@ h1 { font-family: 'Space Grotesk', sans-serif; font-size: 19px; margin: 0; }
 .mini-card-cidades { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 4px; }
 .mini-card-cidades button { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; font-size: 11px; color: var(--text); cursor: pointer; }
 .mini-card-cidades button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.mini-card-liderancas { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 4px; }
+.mini-card-liderancas .lideranca-edit-btn { width: 100%; text-align: left; background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 6px 9px; font-size: 11px; color: var(--text); cursor: pointer; }
+.mini-card-liderancas .lideranca-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mini-card-liderancas small.empty { font-size: 11px; color: var(--muted); padding: 4px; }
 .filtro-cidade-ativo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
 .filtro-cidade-ativo b { color: var(--text); }
 .filtro-cidade-ativo button { margin-left: auto; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; color: var(--text); cursor: pointer; font-size: 11px; }
@@ -746,6 +750,16 @@ body {
   font-size: 10px;
   line-height: 1.35;
   color: #8b97a8;
+}
+
+.pin-dobrada {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--gold, #d4a574);
+}
+
+.card-dobrada {
+  color: var(--gold, #d4a574) !important;
 }
 
 .leader-pin-icon {
