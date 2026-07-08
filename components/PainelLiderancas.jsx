@@ -133,6 +133,7 @@ function normalizarLideranca(l, regionais) {
     fel: Number(l.fel || 1),
     atuais: Number(l.votos_atuais || 0),
     meta_votos: l.meta_votos == null ? null : Number(l.meta_votos || 0),
+    dobrada: l.dobrada || '',
     whatsapp: formatarWhatsApp(l.whatsapp || ''),
     responsavel: l.responsavel || '',
     observacao: l.observacao || '',
@@ -377,7 +378,8 @@ export default function PainelLiderancas() {
       const meta = metaLideranca(l);
       const pct = meta > 0 ? Math.min(100, Math.round(((Number(l.atuais) || 0) / meta) * 100)) : 0;
       const deslocado = total > 1 ? `<div class="pin-note">Pin individual deslocado levemente para não ficar sobreposto a outros cadastros da mesma regional.</div>` : '';
-      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${deslocado}</div>`;
+      const dobradaHtml = l.dobrada ? `<div class="pin-dobrada">Dobrada: <b>${escapeHTML(l.dobrada)}</b></div>` : '';
+      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}</div>`;
       const marker = L.marker([posicaoVisual.lat, posicaoVisual.lng], { icon }).addTo(mapObj).bindPopup(html);
       marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
@@ -458,6 +460,7 @@ export default function PainelLiderancas() {
       fel: Number(dados.fel || 1),
       votos_atuais: Number(dados.atuais || 0),
       meta_votos: Number(dados.meta_votos || 0),
+      dobrada: String(dados.dobrada || '').trim(),
       whatsapp: formatarWhatsApp(dados.whatsapp || ''),
       responsavel: String(dados.responsavel || '').trim(),
       observacao: String(dados.observacao || '').trim(),
@@ -557,7 +560,8 @@ export default function PainelLiderancas() {
       'Nome da categoria': categoria.corNome,
       'Descrição da categoria': categoria.nome,
       'Quantidade de votos previstos': meta,
-      'Quantidade de votos alcançados': votos
+      'Quantidade de votos alcançados': votos,
+      'Dobrada': l.dobrada || ''
     };
   }
 
@@ -710,14 +714,14 @@ export default function PainelLiderancas() {
       cidadesMap[cidade].meta += metaLideranca(l);
     });
     const cidades = Object.values(cidadesMap).sort((a, b) => b.qtd - a.qtd);
-    return { ...r, qtd: itens.length, votos: itens.reduce((s, l) => s + (Number(l.atuais) || 0), 0), meta: itens.reduce((s, l) => s + metaLideranca(l), 0), cidades };
+    return { ...r, qtd: itens.length, votos: itens.reduce((s, l) => s + (Number(l.atuais) || 0), 0), meta: itens.reduce((s, l) => s + metaLideranca(l), 0), cidades, itens };
   });
 
   const regionalInicial = listaRegionais(mapaAtivo)[0] || regionais[0];
   const dadosFormulario = editando || {
     id: '', nome: '', local: '', mapa: tempLatLngRef.current?.mapa || mapaAtivo, regional: regionalInicial?.codigo || '',
     lat: tempLatLngRef.current?.lat || regionalInicial?.lat || 0, lng: tempLatLngRef.current?.lng || regionalInicial?.lng || 0,
-    fel: 1, meta_votos: '', atuais: 0, whatsapp: '', responsavel: '', observacao: '', categoria: 'vermelho-politicos'
+    fel: 1, meta_votos: '', atuais: 0, dobrada: '', whatsapp: '', responsavel: '', observacao: '', categoria: 'vermelho-politicos'
   };
 
   if (authLoading) {
@@ -786,9 +790,9 @@ export default function PainelLiderancas() {
           <div className="board" style={{ display: mapaAtivo === 'parana' ? 'flex' : 'none' }}><div className="board-head"><h2>Mapa de Lideranças — Paraná</h2><span>clique no mapa para cadastrar</span></div><div id="map-parana" className="mapa"></div></div>
 
           <div className="resumo-regionais">{resumoRegionais.map((r) => {
-            const podeAbrirCidades = mapaAtivo === 'parana' && r.cidades.length > 0;
+            const temCidades = mapaAtivo === 'parana' && r.cidades.length > 0;
             const expandido = regionalExpandida === r.codigo;
-            const focarLista = () => sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const liderancasRegional = r.itens.filter((l) => !cidadeAtiva || regionalAtiva !== r.codigo || extrairCidade(l.local) === cidadeAtiva);
             return (
               <div key={r.id} className={`mini-card-wrap ${expandido ? 'expandido' : ''}`}>
                 <button
@@ -797,29 +801,32 @@ export default function PainelLiderancas() {
                   onClick={() => {
                     setRegionalAtiva(r.codigo);
                     setCidadeAtiva('');
-                    if (podeAbrirCidades) {
-                      setRegionalExpandida(expandido ? '' : r.codigo);
-                    } else {
-                      setRegionalExpandida('');
-                      focarLista();
-                    }
+                    setRegionalExpandida(expandido ? '' : r.codigo);
                   }}
                 >
-                  <b>{r.nome}{podeAbrirCidades ? (expandido ? ' ▲' : ' ▼') : ''}</b>
+                  <b>{r.nome}{expandido ? ' ▲' : ' ▼'}</b>
                   <span>{r.qtd} lideranças · {r.votos.toLocaleString('pt-BR')} votos · meta {r.meta.toLocaleString('pt-BR')}</span>
                 </button>
-                {podeAbrirCidades && expandido && (
+                {expandido && (
                   <div className="mini-card-cidades">
-                    {r.cidades.map((c) => (
+                    {temCidades && r.cidades.map((c) => (
                       <button
                         type="button"
                         key={c.cidade}
                         className={regionalAtiva === r.codigo && cidadeAtiva === c.cidade ? 'active' : ''}
-                        onClick={() => { setRegionalAtiva(r.codigo); setCidadeAtiva(c.cidade); focarLista(); }}
+                        onClick={() => { setRegionalAtiva(r.codigo); setCidadeAtiva(cidadeAtiva === c.cidade ? '' : c.cidade); }}
                       >
                         {c.cidade} · {c.qtd}
                       </button>
                     ))}
+                    <div className="mini-card-liderancas">
+                      {liderancasRegional.length === 0 && <small className="empty">Nenhuma liderança cadastrada aqui.</small>}
+                      {liderancasRegional.map((l) => (
+                        <button type="button" key={l.id} className="lideranca-edit-btn" onClick={() => setEditando(l)}>
+                          ✎ {l.nome}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -857,10 +864,10 @@ export default function PainelLiderancas() {
                       marker.openPopup();
                     }, 120);
                   }
-                  setEditando(l);
                 }}>
                   <div><b>{l.nome}</b><span>{meta.toLocaleString('pt-BR')}</span></div>
                   <small>{l.local} · {regionalInfo(l.mapa, l.regional)?.nome || ''}</small>
+                  {l.dobrada && <small className="card-dobrada">Dobrada: {l.dobrada}</small>}
                   <small className="card-cat"><em style={{ background: cat.cor, borderColor: corPinBorda(cat) }} />{cat.corNome}: {cat.nomeCurto}</small>
                   <i><em style={{ width: `${pct}%` }} /></i>
                 </button>
@@ -908,6 +915,7 @@ export default function PainelLiderancas() {
             <input type="hidden" name="fel" value={dadosFormulario.fel || 1} />
             <div className="grid-2"><Field label="Meta manual de votos previstos"><input name="meta_votos" type="number" min="0" defaultValue={dadosFormulario.meta_votos || metaLideranca(dadosFormulario)} required /></Field><Field label="Votos alcançados"><input name="atuais" type="number" min="0" defaultValue={dadosFormulario.atuais} /></Field></div>
             <Field label="WhatsApp"><input name="whatsapp" defaultValue={formatarWhatsApp(dadosFormulario.whatsapp)} placeholder="(41) 99999-9999" inputMode="numeric" maxLength="15" onInput={(e) => { e.currentTarget.value = formatarWhatsApp(e.currentTarget.value); }} /></Field>
+            <Field label="Dobrada (candidato a Deputado Estadual)"><input name="dobrada" defaultValue={dadosFormulario.dobrada} placeholder="Nome do candidato a Deputado Estadual" /></Field>
             <Field label="Responsável"><input name="responsavel" defaultValue={dadosFormulario.responsavel} /></Field>
             <Field label="Observação"><textarea name="observacao" defaultValue={dadosFormulario.observacao} /></Field>
             <div className="modal-actions">
