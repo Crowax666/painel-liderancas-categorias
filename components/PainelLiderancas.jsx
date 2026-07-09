@@ -40,7 +40,7 @@ const defaultParams = {
   partido: 'Republicanos',
   vvt: 6300000,
   nv: 30,
-  vac: 100000,
+  vac: 200000,
   nlbModo: 'auto',
   nlbManual: 5
 };
@@ -124,6 +124,7 @@ function normalizarLideranca(l, regionais) {
   return {
     id: l.id,
     nome: l.nome || '',
+    rua: l.rua || '',
     local: l.local || '',
     mapa: l.mapa || regional?.mapa || 'curitiba',
     regional: regional?.codigo || l.regional || '',
@@ -207,6 +208,7 @@ export default function PainelLiderancas() {
   const tempLatLngRef = useRef(null);
   const sidebarRef = useRef(null);
   const localInputRef = useRef(null);
+  const ruaInputRef = useRef(null);
   const latInputRef = useRef(null);
   const lngInputRef = useRef(null);
   const localOriginalRef = useRef('');
@@ -379,7 +381,7 @@ export default function PainelLiderancas() {
       const pct = meta > 0 ? Math.min(100, Math.round(((Number(l.atuais) || 0) / meta) * 100)) : 0;
       const deslocado = total > 1 ? `<div class="pin-note">Pin individual deslocado levemente para não ficar sobreposto a outros cadastros da mesma regional.</div>` : '';
       const dobradaHtml = l.dobrada ? `<div class="pin-dobrada">Dobrada: <b>${escapeHTML(l.dobrada)}</b></div>` : '';
-      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}</div>`;
+      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${l.rua ? escapeHTML(l.rua) + ' — ' : ''}${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}</div>`;
       const marker = L.marker([posicaoVisual.lat, posicaoVisual.lng], { icon }).addTo(mapObj).bindPopup(html);
       marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
@@ -399,7 +401,7 @@ export default function PainelLiderancas() {
   useEffect(() => {
     if (formAberto || editando) {
       setFormMapa(editando?.mapa || tempLatLngRef.current?.mapa || mapaAtivo);
-      localOriginalRef.current = editando?.local || '';
+      localOriginalRef.current = editando ? [editando.rua, editando.local].filter(Boolean).join(', ') : '';
       setGeocodeMsg('');
     }
   }, [formAberto, editando]);
@@ -453,6 +455,7 @@ export default function PainelLiderancas() {
       campanha_id: CAMPANHA_ID,
       regional_id: regional?.id || null,
       nome,
+      rua: String(dados.rua || '').trim(),
       local: String(dados.local || regional?.nome || '').trim(),
       mapa,
       lat: Number(dados.lat || latPadrao || 0),
@@ -504,6 +507,12 @@ export default function PainelLiderancas() {
 
 
 
+  function enderecoParaGeocodificar() {
+    const rua = ruaInputRef.current?.value?.trim();
+    const local = localInputRef.current?.value?.trim();
+    return [rua, local].filter(Boolean).join(', ');
+  }
+
   async function geocodificarEndereco(textoDigitado, mapaOverride) {
     const texto = String(textoDigitado || '').trim();
     if (!texto) return;
@@ -554,6 +563,7 @@ export default function PainelLiderancas() {
     const categoria = categoriaInfo(l.categoria);
     return {
       'Nome': l.nome || '',
+      'Rua': l.rua || '',
       'Bairro': bairro,
       'Cidade': cidade,
       'Regional': regionalNome,
@@ -576,7 +586,7 @@ export default function PainelLiderancas() {
 
       const todas = liderancas.map(linhaLideranca);
       const wsTodas = XLSX.utils.json_to_sheet(todas.length ? todas : [{ 'Aviso': 'Nenhuma liderança cadastrada ainda.' }]);
-      ajustarColunas(wsTodas, [30, 24, 24, 30, 22, 58, 28, 28]);
+      ajustarColunas(wsTodas, [30, 22, 24, 24, 30, 22, 58, 28, 28]);
       XLSX.utils.book_append_sheet(wb, wsTodas, 'Todas lideranças');
 
       const resumo = regionais.map((r) => {
@@ -619,14 +629,14 @@ export default function PainelLiderancas() {
         .sort((a, b) => (Number(b.atuais) || 0) - (Number(a.atuais) || 0))
         .map(linhaLideranca);
       const wsRanking = XLSX.utils.json_to_sheet(ranking.length ? ranking : [{ 'Aviso': 'Nenhuma liderança cadastrada ainda.' }]);
-      ajustarColunas(wsRanking, [30, 24, 24, 30, 22, 58, 28, 28]);
+      ajustarColunas(wsRanking, [30, 22, 24, 24, 30, 22, 58, 28, 28]);
       XLSX.utils.book_append_sheet(wb, wsRanking, 'Ranking votos');
 
       const pendencias = liderancas
         .filter((l) => (Number(l.atuais) || 0) === 0 || !l.whatsapp || !l.responsavel)
         .map(linhaLideranca);
       const wsPendencias = XLSX.utils.json_to_sheet(pendencias.length ? pendencias : [{ 'Aviso': 'Nenhuma pendência encontrada.' }]);
-      ajustarColunas(wsPendencias, [30, 24, 24, 30, 22, 58, 28, 28]);
+      ajustarColunas(wsPendencias, [30, 22, 24, 24, 30, 22, 58, 28, 28]);
       XLSX.utils.book_append_sheet(wb, wsPendencias, 'Pendências');
 
       const contatos = liderancas.map((l) => ({
@@ -658,6 +668,7 @@ export default function PainelLiderancas() {
   function exportarCSV() {
     const linhas = [[
       'nome',
+      'rua',
       'bairro',
       'cidade',
       'regional',
@@ -670,6 +681,7 @@ export default function PainelLiderancas() {
       const linha = linhaLideranca(l);
       linhas.push([
         linha['Nome'],
+        linha['Rua'],
         linha['Bairro'],
         linha['Cidade'],
         linha['Regional'],
@@ -703,6 +715,12 @@ export default function PainelLiderancas() {
   const somaAtuais = liderancas.reduce((s, l) => s + (Number(l.atuais) || 0), 0);
   const progresso = somaMetas > 0 ? Math.min(100, Math.round((somaAtuais / somaMetas) * 100)) : 0;
 
+  const alvoVotos = Number(params.vac) || 200000;
+  const faltamVotos = Math.max(alvoVotos - somaAtuais, 0);
+  const progressoAlvo = alvoVotos > 0 ? Math.min(100, Math.round((somaAtuais / alvoVotos) * 100)) : 0;
+  const votosCuritiba = liderancas.filter((l) => l.mapa === 'curitiba').reduce((s, l) => s + (Number(l.atuais) || 0), 0);
+  const votosParana = liderancas.filter((l) => l.mapa === 'parana').reduce((s, l) => s + (Number(l.atuais) || 0), 0);
+
   const resumoRegionais = listaRegionais(mapaAtivo).map((r) => {
     const itens = liderancas.filter((l) => l.mapa === mapaAtivo && l.regional === r.codigo);
     const cidadesMap = {};
@@ -719,7 +737,7 @@ export default function PainelLiderancas() {
 
   const regionalInicial = listaRegionais(mapaAtivo)[0] || regionais[0];
   const dadosFormulario = editando || {
-    id: '', nome: '', local: '', mapa: tempLatLngRef.current?.mapa || mapaAtivo, regional: regionalInicial?.codigo || '',
+    id: '', nome: '', rua: '', local: '', mapa: tempLatLngRef.current?.mapa || mapaAtivo, regional: regionalInicial?.codigo || '',
     lat: tempLatLngRef.current?.lat || regionalInicial?.lat || 0, lng: tempLatLngRef.current?.lng || regionalInicial?.lng || 0,
     fel: 1, meta_votos: '', atuais: 0, dobrada: '', whatsapp: '', responsavel: '', observacao: '', categoria: 'vermelho-politicos'
   };
@@ -751,21 +769,48 @@ export default function PainelLiderancas() {
         <div className="brand"><div className="eyebrow">Painel de Campanha</div><h1>{params.candidato} · {params.partido}</h1></div>
         <div className="top-actions">
           <button className="btn small" onClick={abrirNovaLideranca}>+ Nova liderança</button>
-          <button className="params-toggle" onClick={() => setDrawer((v) => !v)}>⚙ Parâmetros</button>
-          <button className="params-toggle" onClick={carregarDados}>{carregando ? 'Sincronizando...' : 'Sincronizar'}</button>
-          <button className="params-toggle" onClick={sair}>Sair</button>
+          <button className="btn-secondary" onClick={() => setDrawer((v) => !v)}>⚙ Parâmetros</button>
+          <button className="btn-secondary" onClick={carregarDados}>{carregando ? 'Sincronizando...' : 'Sincronizar'}</button>
+          <button className="btn-text" onClick={sair}>Sair</button>
         </div>
       </header>
 
       <section className="notice">Conectado ao Supabase. Os dados agora ficam no banco e são compartilhados com usuários autorizados da campanha.</section>
       {erro && <section className="notice error">{erro}</section>}
 
-      <section className="stats-grid">
-        <Stat badge="VAC" value={Number(params.vac).toLocaleString('pt-BR')} caption="Meta de votos do candidato" gold />
-        <Stat badge="QE" value={qe.toLocaleString('pt-BR')} caption="VVT ÷ número de vagas" />
-        <Stat badge="VMI" value={vmi.toLocaleString('pt-BR')} caption="10% do quociente eleitoral" />
-        <Stat badge="NLB" value={nlb} caption="Lideranças consideradas" />
-        <Stat badge="MVL" value={somaMetas.toLocaleString('pt-BR')} caption="Soma das metas individuais" gold />
+      <section className="meta-hero-wrap">
+        <div className="meta-hero">
+          <div className="meta-hero-top">
+            <div>
+              <span className="meta-hero-label">Alvo da campanha</span>
+              <b className="meta-hero-value">{alvoVotos.toLocaleString('pt-BR')}</b>
+            </div>
+            <span className="meta-hero-pct">{progressoAlvo}%</span>
+          </div>
+          <div className="meta-hero-bar"><div style={{ width: `${progressoAlvo}%` }} /></div>
+          <div className="meta-hero-split">
+            <div className="meta-hero-item captados">
+              <span>Votos captados</span>
+              <b>{somaAtuais.toLocaleString('pt-BR')}</b>
+            </div>
+            <div className="meta-hero-item restantes">
+              <span>Restante p/ a meta</span>
+              <b>{faltamVotos.toLocaleString('pt-BR')}</b>
+            </div>
+          </div>
+        </div>
+        <div className="region-cards">
+          <div className="region-card">
+            <span className="region-tag">Consolidado</span>
+            <div className="region-city">Curitiba</div>
+            <b>{votosCuritiba.toLocaleString('pt-BR')}</b>
+          </div>
+          <div className="region-card">
+            <span className="region-tag">Consolidado</span>
+            <div className="region-city">Paraná (interior)</div>
+            <b>{votosParana.toLocaleString('pt-BR')}</b>
+          </div>
+        </div>
       </section>
 
       {drawer && (
@@ -774,7 +819,7 @@ export default function PainelLiderancas() {
           <Field label="Partido"><input value={params.partido} onChange={(e) => setParams({ ...params, partido: e.target.value })} /></Field>
           <Field label="VVT"><input type="number" value={params.vvt} onChange={(e) => setParams({ ...params, vvt: Number(e.target.value) || 1 })} /></Field>
           <Field label="Nº vagas"><input type="number" value={params.nv} onChange={(e) => setParams({ ...params, nv: Number(e.target.value) || 1 })} /></Field>
-          <Field label="VAC"><input type="number" value={params.vac} onChange={(e) => setParams({ ...params, vac: Number(e.target.value) || 1 })} /></Field>
+          <Field label="Alvo de votos (campanha)"><input type="number" value={params.vac} onChange={(e) => setParams({ ...params, vac: Number(e.target.value) || 1 })} /></Field>
           <Field label="NLB"><select value={params.nlbModo} onChange={(e) => setParams({ ...params, nlbModo: e.target.value })}><option value="auto">Automático</option><option value="manual">Manual</option></select></Field>
           {params.nlbModo === 'manual' && <Field label="NLB manual"><input type="number" value={params.nlbManual} onChange={(e) => setParams({ ...params, nlbManual: Number(e.target.value) || 1 })} /></Field>}
         </section>
@@ -782,9 +827,20 @@ export default function PainelLiderancas() {
 
       <section className="body-grid">
         <div className="map-col">
-          <div className="tabs"><button className={mapaAtivo === 'curitiba' ? 'active' : ''} onClick={() => setMapaAtivo('curitiba')}>Regional Curitiba</button><button className={mapaAtivo === 'parana' ? 'active' : ''} onClick={() => setMapaAtivo('parana')}>Estado do Paraná</button></div>
-          <div className="regional-buttons"><button className={!regionalAtiva ? 'active' : ''} onClick={() => { setRegionalAtiva(''); setCidadeAtiva(''); setRegionalExpandida(''); }}>Todas</button>{listaRegionais(mapaAtivo).map((r) => <button key={r.id} className={regionalAtiva === r.codigo ? 'active' : ''} onClick={() => { setRegionalAtiva(r.codigo); setCidadeAtiva(''); setRegionalExpandida(''); }}>{r.nome}</button>)}</div>
-          <div className="pin-legend">{CATEGORIAS_PIN.map((c) => <span key={c.codigo}><i style={{ background: c.cor, borderColor: c.codigo === 'branco-empresarios' ? '#111827' : 'transparent' }} />{c.corNome}: {c.nomeCurto}</span>)}</div>
+          <div className="tabs tabs-full">
+            <span className="tabs-pill" style={{ transform: mapaAtivo === 'parana' ? 'translateX(100%)' : 'translateX(0)' }} />
+            <button className={mapaAtivo === 'curitiba' ? 'active' : ''} onClick={() => setMapaAtivo('curitiba')}>Regional Curitiba</button>
+            <button className={mapaAtivo === 'parana' ? 'active' : ''} onClick={() => setMapaAtivo('parana')}>Estado do Paraná</button>
+          </div>
+          <div className="regional-buttons">
+            <button className={!regionalAtiva ? 'active' : ''} onClick={() => { setRegionalAtiva(''); setCidadeAtiva(''); setRegionalExpandida(''); }}>Todas · {liderancas.filter((l) => l.mapa === mapaAtivo).length}</button>
+            {resumoRegionais.map((r) => (
+              <button key={r.id} className={regionalAtiva === r.codigo ? 'active' : ''} onClick={() => { setRegionalAtiva(r.codigo); setCidadeAtiva(''); setRegionalExpandida(''); }}>
+                <i className="chip-dot" style={{ background: r.cor }} />{r.nome} · {r.qtd}
+              </button>
+            ))}
+          </div>
+          <div className="pin-legend">{CATEGORIAS_PIN.map((c) => <span key={c.codigo}><i style={{ background: c.cor, borderColor: c.codigo === 'branco-empresarios' ? '#111827' : 'transparent' }} />{c.nomeCurto}</span>)}</div>
 
           <div className="board" style={{ display: mapaAtivo === 'curitiba' ? 'flex' : 'none' }}><div className="board-head"><h2>Mapa de Lideranças — Curitiba</h2><span>clique no mapa para cadastrar</span></div><div id="map-curitiba" className="mapa"></div></div>
           <div className="board" style={{ display: mapaAtivo === 'parana' ? 'flex' : 'none' }}><div className="board-head"><h2>Mapa de Lideranças — Paraná</h2><span>clique no mapa para cadastrar</span></div><div id="map-parana" className="mapa"></div></div>
@@ -804,8 +860,12 @@ export default function PainelLiderancas() {
                     setRegionalExpandida(expandido ? '' : r.codigo);
                   }}
                 >
-                  <b>{r.nome}{expandido ? ' ▲' : ' ▼'}</b>
-                  <span>{r.qtd} lideranças · {r.votos.toLocaleString('pt-BR')} votos · meta {r.meta.toLocaleString('pt-BR')}</span>
+                  <div className="mini-card-head">
+                    <span className="mini-card-title"><i className="chip-dot" style={{ background: r.cor }} />{r.nome}</span>
+                    <i className={`mini-card-chevron ${expandido ? 'up' : ''}`} />
+                  </div>
+                  <span className="mini-card-meta">{r.qtd} lideranças · {r.votos.toLocaleString('pt-BR')} votos · meta {r.meta.toLocaleString('pt-BR')}</span>
+                  <span className="mini-card-bar"><span style={{ width: `${r.meta > 0 ? Math.min(100, Math.round((r.votos / r.meta) * 100)) : 0}%` }} /></span>
                 </button>
                 {expandido && (
                   <div className="mini-card-cidades">
@@ -853,20 +913,25 @@ export default function PainelLiderancas() {
               const pct = meta > 0 ? Math.min(100, Math.round(((Number(l.atuais) || 0) / meta) * 100)) : 0;
               const cat = categoriaInfo(l.categoria);
               return (
-                <button key={l.id} className="l-card" style={{ borderLeftColor: cat.cor }} onClick={() => {
-                  const mapObj = l.mapa === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
-                  const marker = markersRef.current[l.mapa]?.[l.id];
-                  if (mapObj && marker) {
-                    setMapaAtivo(l.mapa);
-                    setTimeout(() => {
-                      mapObj.invalidateSize();
-                      mapObj.setView(marker.getLatLng(), l.mapa === 'curitiba' ? 14 : 8, { animate: true });
-                      marker.openPopup();
-                    }, 120);
-                  }
-                }}>
-                  <div><b>{l.nome}</b><span>{meta.toLocaleString('pt-BR')}</span></div>
-                  <small>{l.local} · {regionalInfo(l.mapa, l.regional)?.nome || ''}</small>
+                <button
+                  key={l.id}
+                  className="l-card"
+                  style={{ borderLeftColor: cat.cor }}
+                  onClick={() => {
+                    const mapObj = l.mapa === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
+                    const marker = markersRef.current[l.mapa]?.[l.id];
+                    if (mapObj && marker) {
+                      setMapaAtivo(l.mapa);
+                      setTimeout(() => {
+                        mapObj.invalidateSize();
+                        mapObj.setView(marker.getLatLng(), l.mapa === 'curitiba' ? 14 : 8, { animate: true });
+                        marker.openPopup();
+                      }, 120);
+                    }
+                  }}
+                >
+                  <div><b>{l.nome}</b><span className="l-card-votos">{meta.toLocaleString('pt-BR')}</span></div>
+                  <small>{l.rua ? `${l.rua} — ` : ''}{l.local} · {regionalInfo(l.mapa, l.regional)?.nome || ''}</small>
                   {l.dobrada && <small className="card-dobrada">Dobrada: {l.dobrada}</small>}
                   <small className="card-cat"><em style={{ background: cat.cor, borderColor: corPinBorda(cat) }} />{cat.corNome}: {cat.nomeCurto}</small>
                   <i><em style={{ width: `${pct}%` }} /></i>
@@ -884,37 +949,61 @@ export default function PainelLiderancas() {
           <form className="modal" onSubmit={salvarLideranca} onClick={(e) => e.stopPropagation()}>
             <h2>{editando ? 'Editar liderança' : 'Nova liderança'}</h2>
             <input type="hidden" name="id" defaultValue={dadosFormulario.id || ''} />
+
+            <div className="form-section-label">Identificação</div>
             <Field label="Nome"><input name="nome" defaultValue={dadosFormulario.nome} required /></Field>
-            <div className="grid-2"><Field label="Mapa"><select name="mapa" value={formMapa} onChange={(e) => {
+            <div className="grid-2">
+              <Field label="Categoria / cor do pin"><select name="categoria" defaultValue={dadosFormulario.categoria || 'vermelho-politicos'}>{CATEGORIAS_PIN.map((c) => <option key={c.codigo} value={c.codigo}>{c.corNome} — {c.nome}</option>)}</select></Field>
+              <Field label="WhatsApp"><input name="whatsapp" defaultValue={formatarWhatsApp(dadosFormulario.whatsapp)} placeholder="(41) 99999-9999" inputMode="numeric" maxLength="15" onInput={(e) => { e.currentTarget.value = formatarWhatsApp(e.currentTarget.value); }} /></Field>
+            </div>
+
+            <div className="form-section-label">Localização</div>
+            <div className="grid-2">
+              <Field label="Mapa"><select name="mapa" value={formMapa} onChange={(e) => {
               const novoMapa = e.target.value;
               setFormMapa(novoMapa);
-              const valorAtual = localInputRef.current?.value?.trim();
-              if (valorAtual) geocodificarEndereco(valorAtual, novoMapa);
-            }}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field><Field label="Regional"><select name="regional" key={formMapa} defaultValue={formMapa === dadosFormulario.mapa ? dadosFormulario.regional : ''}>{listaRegionais(formMapa).map((r) => <option key={r.id} value={r.codigo}>{r.nome}</option>)}</select></Field></div>
+              const endereco = enderecoParaGeocodificar();
+              if (endereco) geocodificarEndereco(endereco, novoMapa);
+            }}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field><Field label="Regional"><select name="regional" key={formMapa} defaultValue={formMapa === dadosFormulario.mapa ? dadosFormulario.regional : ''}>{listaRegionais(formMapa).map((r) => <option key={r.id} value={r.codigo}>{r.nome}</option>)}</select></Field>
+            </div>
+            <Field label="Rua">
+              <input
+                name="rua"
+                ref={ruaInputRef}
+                defaultValue={dadosFormulario.rua}
+                placeholder="Nome da rua (opcional, mas melhora a posição do pino)"
+                onBlur={() => {
+                  const endereco = enderecoParaGeocodificar();
+                  if (endereco && endereco !== localOriginalRef.current.trim()) {
+                    geocodificarEndereco(endereco);
+                  }
+                }}
+              />
+            </Field>
             <Field label="Bairro / cidade">
               <input
                 name="local"
                 ref={localInputRef}
                 defaultValue={dadosFormulario.local}
-                onBlur={(e) => {
-                  const valor = e.target.value.trim();
-                  if (valor && valor !== localOriginalRef.current.trim()) {
-                    geocodificarEndereco(valor);
+                onBlur={() => {
+                  const endereco = enderecoParaGeocodificar();
+                  if (endereco && endereco !== localOriginalRef.current.trim()) {
+                    geocodificarEndereco(endereco);
                   }
                 }}
               />
             </Field>
             <div className="geocode-row">
-              <button type="button" className="btn ghost small" disabled={geocodando} onClick={() => geocodificarEndereco(localInputRef.current?.value)}>
+              <button type="button" className="btn ghost small" disabled={geocodando} onClick={() => geocodificarEndereco(enderecoParaGeocodificar())}>
                 {geocodando ? 'Localizando...' : '📍 Localizar no mapa automaticamente'}
               </button>
               {geocodeMsg && <small className="geocode-msg">{geocodeMsg}</small>}
             </div>
-            <Field label="Categoria / cor do pin"><select name="categoria" defaultValue={dadosFormulario.categoria || 'vermelho-politicos'}>{CATEGORIAS_PIN.map((c) => <option key={c.codigo} value={c.codigo}>{c.corNome} — {c.nome}</option>)}</select></Field>
             <div className="grid-2"><Field label="Latitude"><input name="lat" ref={latInputRef} defaultValue={dadosFormulario.lat} /></Field><Field label="Longitude"><input name="lng" ref={lngInputRef} defaultValue={dadosFormulario.lng} /></Field></div>
             <input type="hidden" name="fel" value={dadosFormulario.fel || 1} />
+
+            <div className="form-section-label">Progresso</div>
             <div className="grid-2"><Field label="Meta manual de votos previstos"><input name="meta_votos" type="number" min="0" defaultValue={dadosFormulario.meta_votos || metaLideranca(dadosFormulario)} required /></Field><Field label="Votos alcançados"><input name="atuais" type="number" min="0" defaultValue={dadosFormulario.atuais} /></Field></div>
-            <Field label="WhatsApp"><input name="whatsapp" defaultValue={formatarWhatsApp(dadosFormulario.whatsapp)} placeholder="(41) 99999-9999" inputMode="numeric" maxLength="15" onInput={(e) => { e.currentTarget.value = formatarWhatsApp(e.currentTarget.value); }} /></Field>
             <Field label="Dobrada (candidato a Deputado Estadual)"><input name="dobrada" defaultValue={dadosFormulario.dobrada} placeholder="Nome do candidato a Deputado Estadual" /></Field>
             <Field label="Responsável"><input name="responsavel" defaultValue={dadosFormulario.responsavel} /></Field>
             <Field label="Observação"><textarea name="observacao" defaultValue={dadosFormulario.observacao} /></Field>
