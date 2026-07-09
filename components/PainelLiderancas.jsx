@@ -716,10 +716,10 @@ export default function PainelLiderancas() {
   const progresso = somaMetas > 0 ? Math.min(100, Math.round((somaAtuais / somaMetas) * 100)) : 0;
 
   const alvoVotos = Number(params.vac) || 200000;
-  const faltamVotos = Math.max(alvoVotos - somaAtuais, 0);
-  const progressoAlvo = alvoVotos > 0 ? Math.min(100, Math.round((somaAtuais / alvoVotos) * 100)) : 0;
-  const votosCuritiba = liderancas.filter((l) => l.mapa === 'curitiba').reduce((s, l) => s + (Number(l.atuais) || 0), 0);
-  const votosParana = liderancas.filter((l) => l.mapa === 'parana').reduce((s, l) => s + (Number(l.atuais) || 0), 0);
+  const faltamVotos = Math.max(alvoVotos - somaMetas, 0);
+  const progressoAlvo = alvoVotos > 0 ? Math.min(100, Math.round((somaMetas / alvoVotos) * 100)) : 0;
+  const votosCuritiba = liderancas.filter((l) => l.mapa === 'curitiba').reduce((s, l) => s + metaLideranca(l), 0);
+  const votosParana = liderancas.filter((l) => l.mapa === 'parana').reduce((s, l) => s + metaLideranca(l), 0);
 
   const resumoRegionais = listaRegionais(mapaAtivo).map((r) => {
     const itens = liderancas.filter((l) => l.mapa === mapaAtivo && l.regional === r.codigo);
@@ -790,8 +790,8 @@ export default function PainelLiderancas() {
           <div className="meta-hero-bar"><div style={{ width: `${progressoAlvo}%` }} /></div>
           <div className="meta-hero-split">
             <div className="meta-hero-item captados">
-              <span>Votos captados</span>
-              <b>{somaAtuais.toLocaleString('pt-BR')}</b>
+              <span>Meta de votos</span>
+              <b>{somaMetas.toLocaleString('pt-BR')}</b>
             </div>
             <div className="meta-hero-item restantes">
               <span>Restante p/ a meta</span>
@@ -922,11 +922,13 @@ export default function PainelLiderancas() {
                     const marker = markersRef.current[l.mapa]?.[l.id];
                     if (mapObj && marker) {
                       setMapaAtivo(l.mapa);
+                      const mapaEl = document.getElementById(l.mapa === 'curitiba' ? 'map-curitiba' : 'map-parana');
+                      mapaEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       setTimeout(() => {
                         mapObj.invalidateSize();
                         mapObj.setView(marker.getLatLng(), l.mapa === 'curitiba' ? 14 : 8, { animate: true });
                         marker.openPopup();
-                      }, 120);
+                      }, 220);
                     }
                   }}
                 >
