@@ -826,6 +826,48 @@ body {
   color: var(--gold, #d4a574);
 }
 
+.pin-edit {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.pin-edit-btn {
+  width: 100%;
+  border: 1px solid var(--accent);
+  background: rgba(45, 212, 160, .08);
+  color: var(--accent);
+  font-family: Inter, sans-serif;
+  font-weight: 700;
+  font-size: 11.5px;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.pin-edit-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pin-edit-confirm button {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+}
+.pin-edit-confirm button:first-of-type {
+  background: var(--accent);
+  color: var(--bg);
+}
+.pin-edit-confirm button:last-of-type {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
 .card-dobrada {
   color: var(--gold, #d4a574) !important;
 }
