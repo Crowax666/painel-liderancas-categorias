@@ -204,6 +204,9 @@ export default function PainelLiderancas() {
   const mapCuritibaRef = useRef(null);
   const mapParanaRef = useRef(null);
   const leafletRef = useRef(null);
+  const boundsCuritibaRef = useRef(null);
+  const boundsParanaRef = useRef(null);
+  const mapaAjustadoRef = useRef({ curitiba: false, parana: false });
   const markersRef = useRef({ curitiba: {}, parana: {} });
   const tempLatLngRef = useRef(null);
   const sidebarRef = useRef(null);
@@ -326,24 +329,26 @@ export default function PainelLiderancas() {
 
       if (!mapCuritibaRef.current) {
         const boundsCuritiba = L.latLngBounds([[-25.75, -49.55], [-25.15, -48.95]]);
+        boundsCuritibaRef.current = boundsCuritiba;
         mapCuritibaRef.current = L.map('map-curitiba', {
+          center: boundsCuritiba.getCenter(),
+          zoom: 11,
           maxBounds: boundsCuritiba,
           maxBoundsViscosity: 1.0
         });
-        mapCuritibaRef.current.fitBounds(boundsCuritiba);
-        mapCuritibaRef.current.setMinZoom(mapCuritibaRef.current.getZoom());
         L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(mapCuritibaRef.current);
         mapCuritibaRef.current.on('click', (e) => abrirFormularioComCoordenada('curitiba', e.latlng));
       }
 
       if (!mapParanaRef.current) {
         const boundsParana = L.latLngBounds([[-26.9, -54.6], [-22.4, -48.0]]);
+        boundsParanaRef.current = boundsParana;
         mapParanaRef.current = L.map('map-parana', {
+          center: boundsParana.getCenter(),
+          zoom: 6,
           maxBounds: boundsParana,
           maxBoundsViscosity: 1.0
         });
-        mapParanaRef.current.fitBounds(boundsParana);
-        mapParanaRef.current.setMinZoom(mapParanaRef.current.getZoom());
         L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(mapParanaRef.current);
         mapParanaRef.current.on('click', (e) => abrirFormularioComCoordenada('parana', e.latlng));
       }
@@ -408,7 +413,14 @@ export default function PainelLiderancas() {
     setRegionalExpandida('');
     setTimeout(() => {
       const map = mapaAtivo === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
-      if (map) map.invalidateSize();
+      if (!map) return;
+      map.invalidateSize();
+      const bounds = mapaAtivo === 'curitiba' ? boundsCuritibaRef.current : boundsParanaRef.current;
+      if (bounds && !mapaAjustadoRef.current[mapaAtivo]) {
+        map.fitBounds(bounds);
+        map.setMinZoom(map.getZoom());
+        mapaAjustadoRef.current[mapaAtivo] = true;
+      }
     }, 80);
   }, [mapaAtivo]);
 
