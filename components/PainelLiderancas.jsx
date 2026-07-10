@@ -331,7 +331,11 @@ export default function PainelLiderancas() {
       }
 
       if (!mapParanaRef.current) {
-        mapParanaRef.current = L.map('map-parana').setView([-24.6, -51.5], 6);
+        mapParanaRef.current = L.map('map-parana', {
+          minZoom: 6,
+          maxBounds: L.latLngBounds([[-27.7, -55.5], [-21.5, -47.0]]),
+          maxBoundsViscosity: 0.9
+        }).setView([-24.6, -51.5], 6);
         L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(mapParanaRef.current);
         mapParanaRef.current.on('click', (e) => abrirFormularioComCoordenada('parana', e.latlng));
       }
