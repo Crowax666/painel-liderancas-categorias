@@ -441,7 +441,6 @@ export default function PainelLiderancas() {
         minWidth: 190,
         autoPanPadding: [24, 24]
       });
-      marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
     });
   }, [liderancas, params, regionais, mapReady, regionalAtiva, cidadeAtiva]);
