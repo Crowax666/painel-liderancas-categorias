@@ -200,6 +200,7 @@ export default function PainelLiderancas() {
   const [editando, setEditando] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [formMapa, setFormMapa] = useState(mapaAtivo);
+  const [formRegional, setFormRegional] = useState('');
 
   const mapCuritibaRef = useRef(null);
   const mapParanaRef = useRef(null);
@@ -427,6 +428,7 @@ export default function PainelLiderancas() {
   useEffect(() => {
     if (formAberto || editando) {
       setFormMapa(editando?.mapa || tempLatLngRef.current?.mapa || mapaAtivo);
+      setFormRegional(editando?.regional || '');
       localOriginalRef.current = editando ? [editando.rua, editando.local].filter(Boolean).join(', ') : '';
       setGeocodeMsg('');
     }
@@ -539,6 +541,25 @@ export default function PainelLiderancas() {
     return [rua, local].filter(Boolean).join(', ');
   }
 
+  function calcularDistanciaAprox(lat1, lng1, lat2, lng2) {
+    const dLat = lat1 - lat2;
+    const dLng = (lng1 - lng2) * Math.cos((lat1 * Math.PI) / 180);
+    return Math.sqrt(dLat * dLat + dLng * dLng);
+  }
+
+  function detectarRegionalPorCoordenada(mapa, lat, lng) {
+    const lista = listaRegionais(mapa);
+    if (!lista.length || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    let melhor = null;
+    let menorDist = Infinity;
+    lista.forEach((r) => {
+      if (!Number.isFinite(Number(r.lat)) || !Number.isFinite(Number(r.lng))) return;
+      const d = calcularDistanciaAprox(lat, lng, Number(r.lat), Number(r.lng));
+      if (d < menorDist) { menorDist = d; melhor = r; }
+    });
+    return melhor;
+  }
+
   async function geocodificarEndereco(textoDigitado, mapaOverride) {
     const texto = String(textoDigitado || '').trim();
     if (!texto) return;
@@ -555,7 +576,9 @@ export default function PainelLiderancas() {
         const lng = Number(dados[0].lon).toFixed(6);
         if (latInputRef.current) latInputRef.current.value = lat;
         if (lngInputRef.current) lngInputRef.current.value = lng;
-        setGeocodeMsg(`📍 Local encontrado automaticamente: ${dados[0].display_name}`);
+        const regionalDetectada = detectarRegionalPorCoordenada(mapaAlvo, Number(lat), Number(lng));
+        if (regionalDetectada) setFormRegional(regionalDetectada.codigo);
+        setGeocodeMsg(`📍 ${dados[0].display_name}${regionalDetectada ? ` · Regional: ${regionalDetectada.nome}` : ''}`);
       } else {
         setGeocodeMsg('Não encontramos esse endereço automaticamente. Ajuste a latitude/longitude manualmente ou clique no mapa.');
       }
@@ -992,8 +1015,12 @@ export default function PainelLiderancas() {
               setFormMapa(novoMapa);
               const endereco = enderecoParaGeocodificar();
               if (endereco) geocodificarEndereco(endereco, novoMapa);
-            }}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field><Field label="Regional"><select name="regional" key={formMapa} defaultValue={formMapa === dadosFormulario.mapa ? dadosFormulario.regional : ''}>{listaRegionais(formMapa).map((r) => <option key={r.id} value={r.codigo}>{r.nome}</option>)}</select></Field>
+            }}><option value="curitiba">Curitiba</option><option value="parana">Paraná</option></select></Field>
+              <Field label="Regional (automática)">
+                <div className="regional-auto">{(listaRegionais(formMapa).find((r) => r.codigo === formRegional) || {}).nome || 'Preencha o endereço abaixo'}</div>
+              </Field>
             </div>
+            <input type="hidden" name="regional" value={formRegional} readOnly />
             <Field label="Rua">
               <input
                 name="rua"
