@@ -325,17 +325,25 @@ export default function PainelLiderancas() {
       leafletRef.current = L;
 
       if (!mapCuritibaRef.current) {
-        mapCuritibaRef.current = L.map('map-curitiba').setView([-25.455, -49.28], 11);
+        const boundsCuritiba = L.latLngBounds([[-25.75, -49.55], [-25.15, -48.95]]);
+        mapCuritibaRef.current = L.map('map-curitiba', {
+          maxBounds: boundsCuritiba,
+          maxBoundsViscosity: 1.0
+        });
+        mapCuritibaRef.current.fitBounds(boundsCuritiba);
+        mapCuritibaRef.current.setMinZoom(mapCuritibaRef.current.getZoom());
         L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(mapCuritibaRef.current);
         mapCuritibaRef.current.on('click', (e) => abrirFormularioComCoordenada('curitiba', e.latlng));
       }
 
       if (!mapParanaRef.current) {
+        const boundsParana = L.latLngBounds([[-26.9, -54.6], [-22.4, -48.0]]);
         mapParanaRef.current = L.map('map-parana', {
-          minZoom: 6,
-          maxBounds: L.latLngBounds([[-27.7, -55.5], [-21.5, -47.0]]),
-          maxBoundsViscosity: 0.9
-        }).setView([-24.6, -51.5], 6);
+          maxBounds: boundsParana,
+          maxBoundsViscosity: 1.0
+        });
+        mapParanaRef.current.fitBounds(boundsParana);
+        mapParanaRef.current.setMinZoom(mapParanaRef.current.getZoom());
         L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(mapParanaRef.current);
         mapParanaRef.current.on('click', (e) => abrirFormularioComCoordenada('parana', e.latlng));
       }
@@ -365,6 +373,8 @@ export default function PainelLiderancas() {
       const info = regionalInfo(l.mapa, l.regional);
       const cat = categoriaInfo(l.categoria);
       if (!info || !Number.isFinite(Number(l.lat)) || !Number.isFinite(Number(l.lng))) return;
+      const visivel = (!regionalAtiva || l.regional === regionalAtiva) && (!cidadeAtiva || extrairCidade(l.local) === cidadeAtiva);
+      if (!visivel) return;
       const mapObj = l.mapa === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
       if (!mapObj) return;
 
@@ -390,7 +400,7 @@ export default function PainelLiderancas() {
       marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
     });
-  }, [liderancas, params, regionais, mapReady]);
+  }, [liderancas, params, regionais, mapReady, regionalAtiva, cidadeAtiva]);
 
   useEffect(() => {
     setRegionalAtiva('');
