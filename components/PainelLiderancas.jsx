@@ -436,7 +436,11 @@ export default function PainelLiderancas() {
         </span>
       </div>`;
       const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${l.rua ? escapeHTML(l.rua) + ' — ' : ''}${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}${editHtml}</div>`;
-      const marker = L.marker([posicaoVisual.lat, posicaoVisual.lng], { icon }).addTo(mapObj).bindPopup(html);
+      const marker = L.marker([posicaoVisual.lat, posicaoVisual.lng], { icon }).addTo(mapObj).bindPopup(html, {
+        maxWidth: 240,
+        minWidth: 190,
+        autoPanPadding: [24, 24]
+      });
       marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
     });
