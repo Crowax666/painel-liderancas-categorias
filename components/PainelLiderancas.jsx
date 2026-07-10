@@ -208,6 +208,7 @@ export default function PainelLiderancas() {
   const boundsCuritibaRef = useRef(null);
   const boundsParanaRef = useRef(null);
   const mapaAjustadoRef = useRef({ curitiba: false, parana: false });
+  const liderancasRef = useRef([]);
   const markersRef = useRef({ curitiba: {}, parana: {} });
   const tempLatLngRef = useRef(null);
   const sidebarRef = useRef(null);
@@ -317,6 +318,30 @@ export default function PainelLiderancas() {
   }, []);
 
   useEffect(() => {
+    window.__pinConfirmarEditar = (id) => {
+      const btn = document.getElementById(`pin-edit-btn-${id}`);
+      const confirm = document.getElementById(`pin-edit-confirm-${id}`);
+      if (btn) btn.style.display = 'none';
+      if (confirm) confirm.style.display = 'flex';
+    };
+    window.__pinCancelarEditar = (id) => {
+      const btn = document.getElementById(`pin-edit-btn-${id}`);
+      const confirm = document.getElementById(`pin-edit-confirm-${id}`);
+      if (confirm) confirm.style.display = 'none';
+      if (btn) btn.style.display = 'inline-flex';
+    };
+    window.__pinEditarLideranca = (id) => {
+      const l = liderancasRef.current.find((item) => item.id === id);
+      if (l) setEditando(l);
+    };
+    return () => {
+      delete window.__pinConfirmarEditar;
+      delete window.__pinCancelarEditar;
+      delete window.__pinEditarLideranca;
+    };
+  }, []);
+
+  useEffect(() => {
     if (session) carregarDados();
   }, [session]);
 
@@ -362,6 +387,7 @@ export default function PainelLiderancas() {
   useEffect(() => {
     if (!mapReady || !leafletRef.current) return;
     const L = leafletRef.current;
+    liderancasRef.current = liderancas;
 
     Object.values(markersRef.current.curitiba).forEach((m) => mapCuritibaRef.current?.removeLayer(m));
     Object.values(markersRef.current.parana).forEach((m) => mapParanaRef.current?.removeLayer(m));
@@ -401,7 +427,15 @@ export default function PainelLiderancas() {
       const pct = meta > 0 ? Math.min(100, Math.round(((Number(l.atuais) || 0) / meta) * 100)) : 0;
       const deslocado = total > 1 ? `<div class="pin-note">Pin individual deslocado levemente para não ficar sobreposto a outros cadastros da mesma regional.</div>` : '';
       const dobradaHtml = l.dobrada ? `<div class="pin-dobrada">Dobrada: <b>${escapeHTML(l.dobrada)}</b></div>` : '';
-      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${l.rua ? escapeHTML(l.rua) + ' — ' : ''}${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}</div>`;
+      const editHtml = `<div class="pin-edit">
+        <button type="button" id="pin-edit-btn-${l.id}" class="pin-edit-btn" onclick="window.__pinConfirmarEditar('${l.id}')">✎ Editar liderança</button>
+        <span id="pin-edit-confirm-${l.id}" class="pin-edit-confirm" style="display:none;">
+          Editar esta liderança?
+          <button type="button" onclick="window.__pinEditarLideranca('${l.id}')">Sim</button>
+          <button type="button" onclick="window.__pinCancelarEditar('${l.id}')">Não</button>
+        </span>
+      </div>`;
+      const html = `<div class="pin-popup"><h4>${escapeHTML(l.nome)}</h4><div>${l.rua ? escapeHTML(l.rua) + ' — ' : ''}${escapeHTML(l.local)} · ${escapeHTML(info.nome)}</div><div class="pin-cat"><span style="background:${cat.cor};border-color:${corPinBorda(cat)}"></span>${escapeHTML(cat.corNome)} — ${escapeHTML(cat.nomeCurto)}</div><p>Meta: <b>${meta.toLocaleString('pt-BR')}</b><br/>Captados: <b>${Number(l.atuais || 0).toLocaleString('pt-BR')} (${pct}%)</b></p>${dobradaHtml}${deslocado}${editHtml}</div>`;
       const marker = L.marker([posicaoVisual.lat, posicaoVisual.lng], { icon }).addTo(mapObj).bindPopup(html);
       marker.on('click', () => setEditando(l));
       markersRef.current[l.mapa][l.id] = marker;
