@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-const CAMPANHA_ID = process.env.NEXT_PUBLIC_CAMPANHA_ID || '6d493722-17d8-4ea2-a488-d1c12d399372';
+const CAMPANHA_ID = process.env.NEXT_PUBLIC_CAMPANHA_ID;
 
 const REGIONAIS_PADRAO_CURITIBA = [
   { codigo: 'matriz', nome: 'Matriz', mapa: 'curitiba', lat: -25.4284, lng: -49.2733, cor: '#d4a574' },
@@ -307,6 +307,11 @@ export default function PainelLiderancas() {
       setErro('As variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY não foram encontradas.');
       return;
     }
+    if (!CAMPANHA_ID) {
+      setAuthLoading(false);
+      setErro('A variável NEXT_PUBLIC_CAMPANHA_ID não foi configurada.');
+      return;
+    }
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session || null);
       setAuthLoading(false);
@@ -542,7 +547,7 @@ export default function PainelLiderancas() {
     setCarregando(true);
     setErro('');
     const query = existenteId
-      ? supabase.from('liderancas').update(payload).eq('id', existenteId).select('*').single()
+      ? supabase.from('liderancas').update(payload).eq('id', existenteId).eq('campanha_id', CAMPANHA_ID).select('*').single()
       : supabase.from('liderancas').insert(payload).select('*').single();
     const { error } = await query;
     setCarregando(false);
@@ -560,7 +565,7 @@ export default function PainelLiderancas() {
     if (!confirm('Deseja excluir esta liderança?')) return;
     setCarregando(true);
     setErro('');
-    const { error } = await supabase.from('liderancas').delete().eq('id', id);
+    const { error } = await supabase.from('liderancas').delete().eq('id', id).eq('campanha_id', CAMPANHA_ID);
     setCarregando(false);
     if (error) {
       setErro(error.message || 'Erro ao excluir. Apenas administradores podem excluir.');
