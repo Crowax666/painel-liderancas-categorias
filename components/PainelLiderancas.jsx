@@ -446,21 +446,41 @@ export default function PainelLiderancas() {
   }, [liderancas, params, regionais, mapReady, regionalAtiva, cidadeAtiva]);
 
   useEffect(() => {
+    if (!mapReady) return;
     setRegionalAtiva('');
     setCidadeAtiva('');
     setRegionalExpandida('');
-    setTimeout(() => {
-      const map = mapaAtivo === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
-      if (!map) return;
-      map.invalidateSize();
+    const map = mapaAtivo === 'curitiba' ? mapCuritibaRef.current : mapParanaRef.current;
+    const element = document.getElementById(`map-${mapaAtivo}`);
+    if (!map || !element) return;
+
+    let frame = 0;
+    const ajustarMapa = () => {
+      if (!element.clientWidth || !element.clientHeight) return;
+      map.invalidateSize({ pan: false });
       const bounds = mapaAtivo === 'curitiba' ? boundsCuritibaRef.current : boundsParanaRef.current;
       if (bounds && !mapaAjustadoRef.current[mapaAtivo]) {
         map.fitBounds(bounds);
         map.setMinZoom(map.getZoom());
         mapaAjustadoRef.current[mapaAtivo] = true;
       }
-    }, 80);
-  }, [mapaAtivo]);
+    };
+    const agendarAjuste = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(ajustarMapa);
+    };
+    const observador = new ResizeObserver(agendarAjuste);
+    observador.observe(element);
+    agendarAjuste();
+    const atraso = setTimeout(agendarAjuste, 180);
+    window.addEventListener('resize', agendarAjuste);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', agendarAjuste);
+      clearTimeout(atraso);
+      cancelAnimationFrame(frame);
+    };
+  }, [mapaAtivo, mapReady]);
 
   useEffect(() => {
     if (formAberto || editando) {
