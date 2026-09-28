@@ -31,8 +31,8 @@ const REGIONAIS_PADRAO_PARANA = [
   { codigo: 'sudeste', nome: 'Sudeste Paranaense', mapa: 'parana', lat: -25.6, lng: -50.6, cor: '#6b5a8a' }
 ];
 
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const TILE_ATTRIBUTION = '&copy; OpenStreetMap &copy; CARTO';
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const TILE_MAX_ZOOM = 19;
 
 const defaultParams = {
